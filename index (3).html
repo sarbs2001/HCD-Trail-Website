@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trail Finder</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.65);
+      z-index: -1;
+      background-size: cover;
+      background-position: center;
+    }
+    body { 
+      background-image: url("https://commons.wikimedia.org/wiki/Special:FilePath/Gfp-wisconsin-forest-hiking-trail.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      color:#1f2a1f; 
+    }
+    .navbar, footer { background:#143d2a; }
+    .navbar {
+        min-height: 76px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        background: linear-gradient(
+            90deg,
+            rgba(10, 43, 28, 0.98),
+            rgba(24, 86, 56, 0.95),
+            rgba(10, 43, 28, 0.98)
+        );
+        backdrop-filter: blur(12px);
+        border-bottom: 2px solid rgba(242, 193, 78, 0.8);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+        }
+
+        .navbar-brand {
+        max-height: 70px;
+        overflow: hidden;
+        }
+
+        .navbar-brand img {
+        height: 58px;
+        max-height: 58px;
+        width: auto;
+        object-fit: contain;
+        display: block;
+        }
+
+        .brand-text {
+        color: #f2c14e;
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        white-space: nowrap;
+        }
+
+        .navbar-nav {
+            gap: 10px;
+            }
+
+            .navbar .nav-link {
+            color: #f7f1dc !important;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            padding: 9px 16px !important;
+            border-radius: 999px;
+            transition: all 0.25s ease;
+            }
+
+            .navbar .nav-link:hover {
+            background: rgba(242, 193, 78, 0.18);
+            color: #f2c14e !important;
+            transform: translateY(-2px);
+            }
+    .card { 
+         border: 2px solid #060505;
+         border-radius:14px; 
+         box-shadow:0 3px 10px #0002;
+         transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+    .card:hover {
+        transform: translateY(-6px) scale(1.02);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+    }
+    .map-section {
+      position: relative;
+      padding-top: 28px !important;
+    }
+    #map {
+      height: 75vh;
+      min-height: 600px;
+      width: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 2px solid #050504
+    }
+    .overlay-box {
+      position: absolute;
+      top: 50px;
+      right: 50px;
+      width: 350px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      box-shadow: 0 14px 35px rgba(0,0,0,0.28);
+    }
+    .trail-img, .modal-img { width:100%; object-fit:cover; }
+    .trail-img { height:130px; }
+    .modal-img { height:230px; }
+    .btn-gold { background:#f2c14e; color:#1f2a1f; border:0; font-weight:bold; }
+    .btn-gold:hover { background:#e5b643; color:#1f2a1f; }
+    .btn-green { background:#143d2a; color:white; border:0; font-weight:bold; }
+    .btn-green:hover { background:#0f2e20; color:white; }
+    .result-count { color:#49614f; font-weight:bold; }
+
+    @media (max-width: 768px) {
+    .overlay-box {
+        position: static;
+        width: 100%;
+        margin-top: 16px;
+    }
+
+    #map {
+        min-height: 420px;
+        height: 60vh;
+    }
+
+    .brand-text {
+        font-size: 1rem;
+    }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+        <img src="data:image/webp;base64,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" alt="" width="350" height="350" />
+        <span class="brand-text">h!ke</span>
+      </a>
+      <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        <div class="navbar-nav ms-auto">
+          <a class="nav-link" href="#">Explore</a>
+          <a class="nav-link" href="#trails">Trails</a>
+          <a class="nav-link" href="#map">Map</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <section class="map-section position-relative p-4">
+    <div id="map"></div>
+    <div class="overlay-box card">
+      <div class="card-body">
+        <h2 class="text-success-emphasis">
+          Your adventure awaits
+        </h2>
+        <p class="small">
+          Use quick options or the search bar to find the right trail for you!
+        </p>
+        <input
+          id="search"
+          class="form-control mb-3"
+          placeholder="Search by name, city, park...">
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-gold"
+            onclick="setFilter('difficulty','Easy')">
+            Easy
+          </button>
+          <button class="btn btn-gold"
+            onclick="setFilter('suitability','Wheelchair-Friendly')">
+            Wheelchair
+          </button>
+          <button class="btn btn-gold"
+            onclick="setFilter('suitability','Family-Friendly')">
+            Family
+          </button>
+          <button class="btn btn-outline-secondary"
+            onclick="resetFilters()">
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <main id="trails" class="container-fluid px-4 pb-4">
+    <div class="row g-4">
+      <aside class="col-lg-3">
+        <div class="card"><div class="card-body">
+          <h3 class="h5 text-success-emphasis">Filters</h3>
+          <label class="form-label mt-3">Difficulty</label><select id="difficulty" class="form-select filter"><option>All</option><option>Easy</option><option>Moderate</option><option>Hard</option></select>
+          <label class="form-label mt-3">Distance</label><select id="distance" class="form-select filter"><option>All</option><option>0-3 miles</option><option>3-7 miles</option><option>7+ miles</option></select>
+          <label class="form-label mt-3">Elevation</label><select id="elevation" class="form-select filter"><option>All</option><option>0-500 feet</option><option>500-1500 feet</option><option>1500+ feet</option></select>
+          <label class="form-label mt-3">Route Type</label><select id="route_type" class="form-select filter"><option>All</option><option>loop</option><option>point-to-point</option><option>out & back</option></select>
+          <label class="form-label mt-3">Suitability</label><select id="suitability" class="form-select filter"><option>All</option><option>Dog-Friendly</option><option>Wheelchair-Friendly</option><option>Family-Friendly</option><option>Stroller-Friendly</option><option>Photography</option><option>Wildlife</option><option>River</option><option>Fishing</option><option>Waterfalls</option><option>Camping</option><option>Wildflowers</option></select>
+        </div></div>
+      </aside>
+      <section class="col-lg-9">
+        <div class="card"><div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h3 class="h5 text-success-emphasis m-0">Popular Trails</h3>
+            <p id="resultCount" class="result-count m-0"></p>
+          </div>
+          <div id="cards" class="row g-3"></div>
+          <div class="d-flex justify-content-between mt-4">
+            <button class="btn btn-gold" onclick="prevPage()">Previous</button>
+            <button class="btn btn-gold" onclick="nextPage()">Next</button>
+          </div>
+        </div></div>
+      </section>
+    </div>
+  </main>
+  <footer class="text-center text-white p-4"><p class="m-0">Designed for easier trail planning, safer visits, and better accessibility.</p></footer>
+  <div class="modal fade" id="trailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content overflow-hidden">
+      <img id="modalImg" class="modal-img" alt="Trail image">
+      <div class="modal-body">
+        <h3 id="modalTitle" class="text-success-emphasis"></h3>
+        <p id="modalInfo"></p>
+        <button class="btn btn-gold" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div></div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const trails = [
+      [
+        "Pinecrest Lake Loop",         
+        "Moderate",                    
+        "3.9 miles",                   
+        "357 ft",                      
+        "Loop",                        
+        ["Pinecrest", "California"],   
+        "Stanislaus National Forest",  
+        "Beautiful alpine lake trail with fishing, forest views, and picnic areas.", 
+        ["Dog-Friendly", "Family-Friendly", "Fishing"],
+        [38.1914, -119.9899],
+      ],
+
+      [
+        "Yosemite Falls Trail",
+        "Hard",
+        "7.2 miles",
+        "3,200 ft",
+        "Out & Back",
+        ["Yosemite Valley", "California"],
+        "Yosemite National Park",
+        "Famous waterfall hike with panoramic valley views, granite cliffs, and access to one of the tallest waterfalls in North America.",
+        ["Family-Friendly", "Photography", "Waterfalls"],
+        [37.7565, -119.5967],
+      ],
+
+      [
+        "Mist Trail",
+        "Hard",
+        "6.4 miles",
+        "2,200 ft",
+        "Loop",
+        ["Yosemite Valley", "California"],
+        "Yosemite National Park",
+        "Iconic Yosemite hike passing Vernal Fall and Nevada Fall with steep granite stairways and mist-covered viewpoints.",
+        ["Waterfalls", "Photography", "Wildlife"],
+        [37.7287, -119.5446],
+      ],
+
+      [
+        "Half Dome Trail",
+        "Hard",
+        "14.2 miles",
+        "4,800 ft",
+        "Out & Back",
+        ["Yosemite Valley", "California"],
+        "Yosemite National Park",
+        "Extremely challenging hike featuring cables, granite domes, alpine scenery, and panoramic Yosemite views.",
+        ["Photography", "Adventure"],
+        [37.7459, -119.5332],
+      ],
+
+      [
+        "Mirror Lake Trail",
+        "Easy",
+        "2.4 miles",
+        "300 ft",
+        "Loop",
+        ["Yosemite Valley", "California"],
+        "Yosemite National Park",
+        "Relaxed scenic walk to Mirror Lake with reflections of Half Dome and surrounding cliffs.",
+        ["Family-Friendly", "Dog-Friendly", "Photography"],
+        [37.7395, -119.5485],
+      ],
+
+      [
+        "Angels Landing",
+        "Hard",
+        "5.4 miles",
+        "1,500 ft",
+        "Out & Back",
+        ["Springdale", "Utah"],
+        "Zion National Park",
+        "Thrilling cliffside trail with chain-assisted sections and dramatic canyon views.",
+        ["Photography", "Adventure"],
+        [37.2692, -112.9507],
+      ],
+
+      [
+        "The Narrows Riverside Walk",
+        "Easy",
+        "2.2 miles",
+        "200 ft",
+        "Out & Back",
+        ["Springdale", "Utah"],
+        "Zion National Park",
+        "Riverside trail leading to the famous Narrows slot canyon with towering sandstone walls.",
+        ["Family-Friendly", "Photography", "River"],
+        [37.2856, -112.9475],
+      ],
+
+      [
+        "Delicate Arch Trail",
+        "Moderate",
+        "3.2 miles",
+        "630 ft",
+        "Out & Back",
+        ["Moab", "Utah"],
+        "Arches National Park",
+        "Popular desert hike leading to Utah’s most famous sandstone arch with sunset photography opportunities.",
+        ["Photography", "Family-Friendly"],
+        [38.7436, -109.4993],
+      ],
+
+      [
+        "Devils Bridge Trail",
+        "Moderate",
+        "4.2 miles",
+        "564 ft",
+        "Out & Back",
+        ["Sedona", "Arizona"],
+        "Coconino National Forest",
+        "Scenic red rock trail leading to the largest natural sandstone arch in Sedona.",
+        ["Photography", "Dog-Friendly"],
+        [34.9138, -111.8140],
+      ],
+
+      [
+        "Bright Angel Trail",
+        "Hard",
+        "15.6 miles",
+        "4,380 ft",
+        "Out & Back",
+        ["Grand Canyon Village", "Arizona"],
+        "Grand Canyon National Park",
+        "Historic canyon descent with dramatic layered rock formations and Colorado River access.",
+        ["Photography", "Adventure"],
+        [36.0570, -112.1438],
+      ],
+
+      [
+        "Avalanche Lake Trail",
+        "Moderate",
+        "5.9 miles",
+        "757 ft",
+        "Out & Back",
+        ["West Glacier", "Montana"],
+        "Glacier National Park",
+        "Forest trail leading to a glacier-fed lake surrounded by waterfalls and towering peaks.",
+        ["Family-Friendly", "Photography", "Wildlife"],
+        [48.6835, -113.8150],
+      ],
+
+      [
+        "Hidden Lake Overlook",
+        "Easy",
+        "2.8 miles",
+        "460 ft",
+        "Out & Back",
+        ["West Glacier", "Montana"],
+        "Glacier National Park",
+        "Boardwalk trail with alpine meadows, mountain goats, and sweeping lake views.",
+        ["Wheelchair-Friendly", "Photography", "Wildlife"],
+        [48.6969, -113.7186],
+      ],
+
+      [
+        "Garibaldi Lake Trail",
+        "Hard",
+        "11.2 miles",
+        "2,625 ft",
+        "Out & Back",
+        ["Squamish", "British Columbia"],
+        "Garibaldi Provincial Park",
+        "Steep forest trail leading to vibrant turquoise alpine lake scenery.",
+        ["Camping", "Photography"],
+        [49.9508, -123.0045],
+      ],
+
+      [
+        "Skyline Trail",
+        "Moderate",
+        "5.5 miles",
+        "1,100 ft",
+        "Loop",
+        ["Paradise", "Washington"],
+        "Mount Rainier National Park",
+        "Wildflower-filled alpine trail with glaciers and Mount Rainier panoramas.",
+        ["Family-Friendly", "Photography", "Wildflowers"],
+        [46.7861, -121.7353],
+      ],
+
+      [
+        "Rattlesnake Ledge",
+        "Moderate",
+        "4.0 miles",
+        "1,160 ft",
+        "Out & Back",
+        ["North Bend", "Washington"],
+        "Rattlesnake Mountain Scenic Area",
+        "Popular Pacific Northwest trail with forest scenery and lake overlook viewpoints.",
+        ["Dog-Friendly", "Photography"],
+        [47.4345, -121.7684],
+      ],
+
+      [
+        "South Kaibab Trail",
+        "Hard",
+        "7.0 miles",
+        "3,000 ft",
+        "Out & Back",
+        ["Grand Canyon Village", "Arizona"],
+        "Grand Canyon National Park",
+        "Ridge-line Grand Canyon hike with dramatic sunrise and canyon depth views.",
+        ["Photography", "Adventure"],
+        [36.0544, -112.0959],
+      ],
+
+      [
+        "Alum Cave Trail",
+        "Moderate",
+        "5.0 miles",
+        "1,125 ft",
+        "Out & Back",
+        ["Gatlinburg", "Tennessee"],
+        "Great Smoky Mountains National Park",
+        "Wooded Appalachian trail featuring stone bluffs, streams, and mountain views.",
+        ["Photography", "Wildflowers"],
+        [35.6339, -83.4512],
+      ],
+
+      [
+        "Emerald Lake Trail",
+        "Easy",
+        "3.2 miles",
+        "702 ft",
+        "Out & Back",
+        ["Estes Park", "Colorado"],
+        "Rocky Mountain National Park",
+        "Classic alpine lake hike passing waterfalls, forests, and mountain lakes.",
+        ["Family-Friendly", "Photography"],
+        [40.3105, -105.6458],
+      ],
+
+      [
+        "Twin Falls Trail",
+        "Easy",
+        "2.6 miles",
+        "400 ft",
+        "Out & Back",
+        ["North Bend", "Washington"],
+        "Olallie State Park",
+        "Short forest hike leading to twin waterfalls in lush Pacific Northwest scenery.",
+        ["Family-Friendly", "Dog-Friendly", "Waterfalls"],
+        [47.4586, -121.6951],
+      ],
+
+      [
+        "Observation Point Trail",
+        "Hard",
+        "8.0 miles",
+        "2,100 ft",
+        "Out & Back",
+        ["Springdale", "Utah"],
+        "Zion National Park",
+        "Elevated canyon overlook trail with sweeping views above Zion Canyon.",
+        ["Photography", "Adventure"],
+        [37.2708, -112.9438],
+      ],
+
+      [
+        "Tahoe Rim Trail",
+        "Moderate",
+        "5.1 miles",
+        "800 ft",
+        "Loop",
+        ["South Lake Tahoe", "California"],
+        "Tahoe National Forest",
+        "Scenic alpine ridge trail overlooking Lake Tahoe and Sierra Nevada peaks.",
+        ["Dog-Friendly", "Mountain Biking", "Photography"],
+        [38.9399, -119.9772],
+      ],
+      
+    ];
+
+    const trailImages = {
+        "Pinecrest Lake Loop":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Pinecrest%20Lake%20California%201.jpg",
+
+        "Yosemite Falls Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Yosemite%20Falls%20from%20trail%2C%20Yosemite%20NP%2C%20CA%2C%20US%20-%20Diliff.jpg",
+
+        "Mist Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Vernal%20Fall%2C%20Yosemite%20NP%2C%20CA%2C%20US%20-%20Diliff.jpg",
+
+        "Half Dome Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Half%20Dome%20from%20Glacier%20Point%2C%20Yosemite%20NP%20-%20Diliff.jpg",
+
+        "Mirror Lake Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Mirro%20Lake%20yosemite%20CA.jpg",
+
+        "Angels Landing":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Angels%20Landing.jpg",
+
+        "The Narrows Riverside Walk":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Zion%20Narrows.jpg",
+
+        "Delicate Arch Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Delicate%20Arch%20sunset.jpg",
+
+        "Devils Bridge Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Devil%27s%20bridge%20Sedona%20Arizona.jpg",
+
+        "Bright Angel Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Grand%20Canyon%20National%20Park%2C%20Top%20of%20Bright%20Angel%20Trail%200084%20-%20Flickr%20-%20Grand%20Canyon%20NPS.jpg",
+
+        "Avalanche Lake Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Avalanche%20Lake%2C%20Glacier%20National%20Park.jpg",
+
+        "Hidden Lake Overlook":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Hidden%20Lake%20Overlook%20%2843026272615%29.jpg",
+
+        "Garibaldi Lake Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Black%20Tusk%20trail.jpg",
+
+        "Skyline Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Skyline%20trail%20In%20September%2C%20Mt.%20Rainier%20National%20Park.%20U.S.A.jpg",
+
+        "Rattlesnake Ledge":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Rattlesnake%20Lake%20with%20Rattlesnake%20Ledge.jpg",
+
+        "South Kaibab Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/South%20Kaibab%20Trail.jpg",
+
+        "Alum Cave Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Alum-cave-bluffs-tn1.jpg",
+
+        "Emerald Lake Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/A461%2C%20Rocky%20Mountain%20National%20Park%2C%20Colorado%2C%20USA%2C%20Emerald%20Lake%2C%202016.jpg",
+
+        "Twin Falls Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Twin%20Falls%20%28Washington%29%2003.jpg",
+
+        "Observation Point Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Zion%20Canyon%20Observation%20Point.jpg",
+
+        "Tahoe Rim Trail":
+            "https://commons.wikimedia.org/wiki/Special:FilePath/Tahoe%20Rim%20Trail%20SL.jpg"
+        };
+
+        trails.forEach(t => {
+        if (trailImages[t[0]]) {
+            t.splice(9, 0, trailImages[t[0]]);
+        }
+        });
+
+    const fallback = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
+    const map = L.map("map").setView([38.16, -119.9], 9);
+    const modal = new bootstrap.Modal(document.getElementById("trailModal"));
+    let markers = [];
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
+
+    const matches = (t) => {
+      const q = search.value.toLowerCase();
+      return (
+        (!q ||
+          t[0].toLowerCase().includes(q) || 
+          t[5][0].toLowerCase().includes(q) ||
+          t[5][1].toLowerCase().includes(q) || 
+          t[6].toLowerCase().includes(q) ||
+          t[7].toLowerCase().includes(q) 
+        )
+        &&
+        (difficulty.value === "All" || t[1] === difficulty.value)
+        &&
+        (distance.value === "All" ||
+          (distance.value === "0-3 miles" && parseFloat(t[2]) < 3) ||
+          (distance.value === "3-7 miles" &&
+            parseFloat(t[2]) >= 3 &&
+            parseFloat(t[2]) <= 7) ||
+          (distance.value === "7+ miles" &&
+            parseFloat(t[2]) > 7)
+        )
+        &&
+        (elevation.value === "All" ||
+          (elevation.value === "0-500 feet" &&
+            parseInt(t[3].replace(/,/g, "")) < 500) ||
+          (elevation.value === "500-1500 feet" &&
+            parseInt(t[3].replace(/,/g, "")) >= 500 &&
+            parseInt(t[3].replace(/,/g, "")) <= 1500) ||
+          (elevation.value === "1500+ feet" &&
+            parseInt(t[3].replace(/,/g, "")) > 1500)
+        )
+        &&
+        (route_type.value === "All" ||
+          t[4].toLowerCase() === route_type.value.toLowerCase())
+        &&
+        (suitability.value === "All" ||
+          t[8].includes(suitability.value))
+      );
+    };
+
+    let currentPage = 0;
+    const trailsPerPage = 6;
+
+    function show() {
+      const list = trails.filter(matches);
+      const start = currentPage * trailsPerPage;
+      const end = start + trailsPerPage;
+      const paginatedList = list.slice(start, end);
+      cards.innerHTML = list.length ? "" : `<div class="col-12"><div class="alert alert-light border">No trails match your search. Try clearing one filter.</div></div>`;
+      resultCount.textContent = `Showing ${paginatedList.length} of ${list.length} matching trails`;
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      paginatedList.forEach(t => {
+        const i = trails.indexOf(t);
+        cards.innerHTML += `
+          <div class="col-md-6 col-xl-4"><div class="card h-100 overflow-hidden">
+            <img class="trail-img" src="${t[9]}" alt="${t[0]}" onerror="this.src='${fallback}'">
+            <div class="card-body">
+              <h5 class="card-title text-success-emphasis">${t[0]}</h5>
+              <p class="card-text">${t[1]}<br>${t[2]}<br>${t[5]}</p>
+              <button class="btn btn-green btn-sm" onclick="details(${i})">View Details</button>
+              <button class="btn btn-outline-success btn-sm" onclick="viewOnMap(${i})">View on Map</button>
+            </div>
+          </div></div>`;
+        const marker = L.marker(t[10]).addTo(map).bindPopup(`${t[0]}<br>${t[1]}<br>${t[3]}<br>${t[4]}`);
+        marker.trailIndex = i;
+        markers.push(marker);
+      });
+
+      fitMap();
+    }
+
+    function fitMap() {
+      if (markers.length === 1) map.setView(markers[0].getLatLng(), 13);
+      if (markers.length > 1) map.fitBounds(L.featureGroup(markers).getBounds(), { padding:[35, 35] });
+      setTimeout(() => map.invalidateSize(), 100);
+    }
+
+    function viewOnMap(i) {
+      const marker = markers.find(m => m.trailIndex === i);
+      map.setView(trails[i][10], 14);
+      if (marker) marker.openPopup();
+      map._container.scrollIntoView({ behavior:"smooth", block:"center" });
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    function details(i) {
+      const t = trails[i];
+      modalImg.src = t[9];
+      modalImg.onerror = () => modalImg.src = fallback;
+      modalTitle.textContent = t[0];
+      modalInfo.innerHTML = `Difficulty: ${t[1]}<br>Distance: ${t[2]}<br>Elevation: ${t[3]}<br>Route Type: ${t[4]}<br>Location: ${t[5]}<br>Forest: ${t[6]}<br>Description: ${t[7]}<br>Suitability: ${t[8]}`;
+      modal.show();
+    }
+
+    function nextPage() {
+      const filtered = trails.filter(matches);
+      if ((currentPage + 1) * trailsPerPage < filtered.length) {
+        currentPage++;
+        show();
+      }
+    }
+
+    function prevPage() {
+      if (currentPage > 0) {
+        currentPage--;
+        show();
+      }
+    }
+
+    function setFilter(id, value) { 
+        resetFilters(false); 
+        document.getElementById(id).value = value; 
+        currentPage = 0;
+        show(); 
+        }
+    function resetFilters(render = true) { search.value = ""; [difficulty, distance, elevation, route_type, suitability].forEach(el => el.value = "All"); if (render) show(); }
+    search.addEventListener("input", () => {currentPage = 0; show(); });
+    document.querySelectorAll(".filter").forEach(el => {el.addEventListener("change", () => {currentPage = 0; show();});});
+    window.addEventListener("load", () => { show(); setTimeout(() => map.invalidateSize(), 300); });
+    window.addEventListener("resize", () => map.invalidateSize());
+  </script>
+</body>
+</html>
